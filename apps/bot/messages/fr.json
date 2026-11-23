@@ -2272,7 +2272,7 @@
   "nickmod_log_footer_auto": "Automod | Modération des pseudos",
   "nickmod_log_footer_rescan": "Automod | Rescan des pseudos",
   "optout_name": "opt-out",
-  "optout_description": "🔒 Gère tes choix de confidentialité sur ce serveur",
+  "optout_description": "🔒 Gère tes choix personnels sur ce serveur : suivi de présence, mention du rappel de bump",
   "optout_presence_name": "presence",
   "optout_presence_description": "Coupe le suivi de ta présence Discord (statut en ligne, statut personnalisé, activité)",
   "optout_guild_only_title": "Commande réservée à un serveur",

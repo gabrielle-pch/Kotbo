@@ -2272,7 +2272,7 @@
   "nickmod_log_footer_auto": "Automod | Nickname moderation",
   "nickmod_log_footer_rescan": "Automod | Nickname rescan",
   "optout_name": "opt-out",
-  "optout_description": "🔒 Manage your privacy choices on this server",
+  "optout_description": "🔒 Manage your personal choices on this server: presence tracking, bump reminder mention",
   "optout_presence_name": "presence",
   "optout_presence_description": "Stop the tracking of your Discord presence (online status, custom status, activity)",
   "optout_guild_only_title": "Server-only command",
