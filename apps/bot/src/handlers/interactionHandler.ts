@@ -160,6 +160,13 @@ export async function handleButton(interaction: Interaction, client: Client): Pr
     return;
   }
 
+  // ── Rappel de bump : réactivation de la mention après /opt-out bump
+  if (customId === 'optout:bump:resume') {
+    const { handleOptOutBumpResume } = await import('../commands/utility/optout.js');
+    await handleOptOutBumpResume(interaction);
+    return;
+  }
+
   // ── Simulateur de modération : sim:<sessionId>:<stepIndex>:<action>[:<minutes>]
   if (customId.startsWith('sim:')) {
     const [, sessionId, stepIndexRaw, action, minutesRaw] = customId.split(':');

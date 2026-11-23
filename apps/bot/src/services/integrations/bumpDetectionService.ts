@@ -27,7 +27,9 @@
  * `BUMP_PROVIDERS` suffit - aucune autre logique n'en dépend.
  */
 import { MessageFlags, type Client, type Message, type TextChannel } from 'discord.js';
+import type { Prisma } from '@prisma/client';
 import prisma from '../../utils/db.js';
+import { upsertRetryingRace } from '../../utils/upsertRetry.js';
 import { logger } from '../../utils/logger.js';
 import { richContainer } from '../../utils/embeds.js';
 
@@ -150,18 +152,28 @@ export async function processDueBumpReminders(client: Client): Promise<void> {
     try {
       const channel = await client.channels.fetch(state.lastChannelId).catch(() => null);
       if (channel?.isTextBased()) {
+        // Le nom du dernier bumper reste affiché ; seule la notification
+        // saute s'il a demandé à ne plus être mentionné.
+        const pingedUserId = state.lastBumpUserId
+          && !(await hasOptedOutOfBumpPing(state.guildId, state.lastBumpUserId))
+          ? state.lastBumpUserId
+          : null;
+        const available = `Disponible depuis <t:${Math.floor(state.nextBumpAt.getTime() / 1000)}:R>`;
+
         const container = richContainer({
           title: '📈 Rappel de bump',
           description:
             `Le serveur peut à nouveau être bump sur **${state.providerLabel}** !`
             + (state.lastBumpUserId ? `\nDernier bump par <@${state.lastBumpUserId}>.` : ''),
-          footer: `Disponible depuis <t:${Math.floor(state.nextBumpAt.getTime() / 1000)}:R>`,
+          footer: pingedUserId
+            ? `${available} · Tape \`/opt-out bump\` pour ne plus recevoir cette mention`
+            : available,
         });
 
         await (channel as TextChannel).send({
           components: [container],
           flags: MessageFlags.IsComponentsV2,
-          allowedMentions: { users: state.lastBumpUserId ? [state.lastBumpUserId] : [] },
+          allowedMentions: { users: pingedUserId ? [pingedUserId] : [] },
         });
       }
     } catch (err) {
@@ -170,6 +182,50 @@ export async function processDueBumpReminders(client: Client): Promise<void> {
       await prisma.bumpState.update({ where: { guildId: state.guildId }, data: { reminded: true } });
     }
   }
+}
+
+/**
+ * `true` quand le membre a demandé à ne plus être mentionné par le rappel
+ * (`/opt-out bump`).
+ *
+ * Une lecture en échec renvoie `true` : mieux vaut un rappel sans mention
+ * qu'un refus déjà exprimé ignoré.
+ */
+export async function hasOptedOutOfBumpPing(guildId: string, userId: string): Promise<boolean> {
+  try {
+    const profile = await prisma.memberProfile.findUnique({
+      where: { guildId_userId: { guildId, userId } },
+      select: { bumpPingOptOut: true },
+    });
+    return profile?.bumpPingOptOut === true;
+  } catch (err) {
+    logger.error('BumpReminder', `Lecture du refus de mention de ${userId} sur ${guildId} impossible`, err);
+    return true;
+  }
+}
+
+/**
+ * Enregistre (ou annule) le refus de mention.
+ *
+ * `identity` complète le profil si la ligne n'existe pas encore, comme pour
+ * `/opt-out presence` : un membre qui se retire avant tout message ne doit pas
+ * apparaître en « Utilisateur inconnu » dans la liste des membres.
+ */
+export async function setBumpPingOptOut(
+  guildId: string,
+  userId: string,
+  optedOut: boolean,
+  identity?: Partial<Prisma.MemberProfileUncheckedCreateInput>,
+): Promise<void> {
+  // La ligne `guilds` peut manquer sur un serveur jamais configuré : la clé
+  // étrangère du profil ferait alors échouer l'écriture du choix du membre.
+  await upsertRetryingRace(() => prisma.guild.upsert({ where: { id: guildId }, update: {}, create: { id: guildId } }));
+
+  await prisma.memberProfile.upsert({
+    where: { guildId_userId: { guildId, userId } },
+    update: { bumpPingOptOut: optedOut },
+    create: { guildId, userId, ...(identity ?? {}), bumpPingOptOut: optedOut },
+  });
 }
 
 export interface BumpStatus {
