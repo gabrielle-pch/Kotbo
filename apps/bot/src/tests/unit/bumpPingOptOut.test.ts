@@ -3,7 +3,7 @@ import path from 'node:path';
 import type { Client } from 'discord.js';
 
 /**
- * Mention du rappel de bump (`/opt-out bump`).
+ * Mention du rappel de bump (`/rappel-bump`).
  *
  * Le rappel mentionne le dernier bumper, sauf s'il a demandé à ne plus l'être.
  * Son nom reste affiché dans tous les cas : seule la notification saute. Une
@@ -57,6 +57,12 @@ const {
   setBumpPingOptOut,
   processDueBumpReminders,
 } = await import('../../services/integrations/bumpDetectionService.js');
+
+const {
+  buildBumpReminderPanel,
+  BUMP_MENTION_OFF_ID,
+  BUMP_MENTION_ON_ID,
+} = await import('../../commands/utility/bumpReminder.js');
 
 const send = mock((_payload?: unknown) => Promise.resolve({}));
 const client = {
@@ -122,7 +128,7 @@ describe('processDueBumpReminders', () => {
 
     const payload = lastSent();
     expect(payload.allowedMentions.users).toEqual([BUMPER]);
-    expect(sentText(payload)).toContain('/opt-out bump');
+    expect(sentText(payload)).toContain('/rappel-bump');
   });
 
   test("garde le nom mais coupe la notification d'un bumper qui a refusé", async () => {
@@ -132,7 +138,7 @@ describe('processDueBumpReminders', () => {
     const payload = lastSent();
     expect(payload.allowedMentions.users).toEqual([]);
     expect(sentText(payload)).toContain(`<@${BUMPER}>`);
-    expect(sentText(payload)).not.toContain('/opt-out bump');
+    expect(sentText(payload)).not.toContain('/rappel-bump');
   });
 
   test('ne mentionne personne quand la lecture du refus échoue', async () => {
@@ -147,5 +153,52 @@ describe('processDueBumpReminders', () => {
 
     expect(bumpUpdate).toHaveBeenCalledTimes(1);
     expect((bumpUpdate.mock.calls[0]![0] as { data: unknown }).data).toEqual({ reminded: true });
+  });
+});
+
+describe('buildBumpReminderPanel', () => {
+  const status = {
+    provider: 'disboard',
+    providerLabel: 'Disboard',
+    lastBumpAt: new Date(Date.now() - 80 * 60_000),
+    lastBumpUserId: BUMPER,
+    nextBumpAt: new Date(Date.now() + 40 * 60_000),
+    overdue: false,
+    overdueMinutes: 0,
+    reminderChannelId: 'channel-bump',
+  };
+
+  function panelText(panel: { toJSON(): unknown }): string {
+    return JSON.stringify(panel.toJSON());
+  }
+
+  test('propose de couper la mention quand elle est active', () => {
+    const text = panelText(buildBumpReminderPanel({ status, optedOut: false, locale: 'fr' }));
+    expect(text).toContain(BUMP_MENTION_OFF_ID);
+    expect(text).not.toContain(BUMP_MENTION_ON_ID);
+    expect(text).toContain('Prochain bump possible sur **Disboard**');
+    expect(text).toContain(`<@${BUMPER}>`);
+  });
+
+  test('propose de réactiver la mention quand elle est coupée', () => {
+    const text = panelText(buildBumpReminderPanel({ status, optedOut: true, locale: 'fr' }));
+    expect(text).toContain(BUMP_MENTION_ON_ID);
+    expect(text).not.toContain(BUMP_MENTION_OFF_ID);
+    expect(text).toContain('Coupée');
+  });
+
+  test('annonce une fenêtre déjà ouverte', () => {
+    const text = panelText(buildBumpReminderPanel({
+      status: { ...status, nextBumpAt: new Date(Date.now() - 5 * 60_000), overdue: true, overdueMinutes: 5 },
+      optedOut: false,
+      locale: 'fr',
+    }));
+    expect(text).toContain('peut être bump sur **Disboard** depuis');
+  });
+
+  test("explique la détection automatique quand aucun bump n'a été vu", () => {
+    const text = panelText(buildBumpReminderPanel({ status: null, optedOut: false, locale: 'fr' }));
+    expect(text).toContain('Aucun bump repéré');
+    expect(text).toContain(BUMP_MENTION_OFF_ID);
   });
 });

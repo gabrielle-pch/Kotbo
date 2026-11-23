@@ -24,6 +24,7 @@ import { noteCommand, noteContextCommand } from './commands/moderation/note.js';
 import { convoquerCommand } from './commands/moderation/convoquer.js';
 import { optOutCommand } from './commands/utility/optout.js';
 import { privacyCommand } from './commands/utility/privacy.js';
+import { bumpReminderCommand } from './commands/utility/bumpReminder.js';
 import { pingCommand } from './commands/utility/ping.js';
 import { profilCommand } from './commands/profile/profil.js';
 import { profileCommand } from './commands/profile/profile.js';
@@ -201,6 +202,7 @@ export const commands: SlashCommandDefinition[] = [
   reportCommand,
   optOutCommand,
   privacyCommand,
+  bumpReminderCommand,
   wikiCommand,
   regleCommand,
   confessionCommand,
@@ -343,6 +345,7 @@ export const COMMAND_MODULES = new Map<ApplicationCommandDefinition, string>([
   [channelCommand, 'auto_thread'],
   [threadCommand, 'auto_thread'],
   [channelhealthCommand, 'channel_health'],
+  [bumpReminderCommand, 'bump_reminder'],
   [serverstatsCommand, 'analytics'],
   [statsCommand, 'analytics'],
   [invitesCommand, 'analytics'],

@@ -160,10 +160,10 @@ export async function handleButton(interaction: Interaction, client: Client): Pr
     return;
   }
 
-  // ── Rappel de bump : réactivation de la mention après /opt-out bump
-  if (customId === 'optout:bump:resume') {
-    const { handleOptOutBumpResume } = await import('../commands/utility/optout.js');
-    await handleOptOutBumpResume(interaction);
+  // ── Rappel de bump : couper / réactiver sa mention depuis /rappel-bump
+  if (customId === 'bumpreminder:mention:off' || customId === 'bumpreminder:mention:on') {
+    const { handleBumpReminderMentionButton } = await import('../commands/utility/bumpReminder.js');
+    await handleBumpReminderMentionButton(interaction);
     return;
   }
 

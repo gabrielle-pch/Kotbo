@@ -166,7 +166,7 @@ export async function processDueBumpReminders(client: Client): Promise<void> {
             `Le serveur peut à nouveau être bump sur **${state.providerLabel}** !`
             + (state.lastBumpUserId ? `\nDernier bump par <@${state.lastBumpUserId}>.` : ''),
           footer: pingedUserId
-            ? `${available} · Tape \`/opt-out bump\` pour ne plus recevoir cette mention`
+            ? `${available} · Tape \`/rappel-bump\` pour ne plus recevoir cette mention`
             : available,
         });
 
@@ -186,7 +186,7 @@ export async function processDueBumpReminders(client: Client): Promise<void> {
 
 /**
  * `true` quand le membre a demandé à ne plus être mentionné par le rappel
- * (`/opt-out bump`).
+ * (`/rappel-bump`).
  *
  * Une lecture en échec renvoie `true` : mieux vaut un rappel sans mention
  * qu'un refus déjà exprimé ignoré.
@@ -207,9 +207,9 @@ export async function hasOptedOutOfBumpPing(guildId: string, userId: string): Pr
 /**
  * Enregistre (ou annule) le refus de mention.
  *
- * `identity` complète le profil si la ligne n'existe pas encore, comme pour
- * `/opt-out presence` : un membre qui se retire avant tout message ne doit pas
- * apparaître en « Utilisateur inconnu » dans la liste des membres.
+ * `identity` complète le profil si la ligne n'existe pas encore : un membre
+ * qui coupe sa mention avant tout message ne doit pas apparaître en
+ * « Utilisateur inconnu » dans la liste des membres.
  */
 export async function setBumpPingOptOut(
   guildId: string,
